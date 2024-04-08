@@ -1,5 +1,5 @@
-s 	s 	s 	t 	r
-c 	c 	t 	r 	r
-t 	s 	c 	t 	t
-c 	r 	c 	t 	t
-c 	r 	c 	c 	r
+t 	s 	t	r 	r
+t 	t 	t 	t 	t
+t 	s 	t 	r 	r
+c 	r 	t 	t 	t
+c 	r 	t 	t 	r
