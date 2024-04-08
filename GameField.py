@@ -5,6 +5,10 @@ from Cell import Cell
 
 
 class Game:
+    _score = 0
+    _blocks_to_add = 3
+    _one_cube_price = 100
+
     def __init__(self, rows: int = 0, columns: int = 0, path_to_file: str = None):
         if path_to_file is not None:
             params = Game.read_field_from_file(path_to_file)
@@ -140,6 +144,38 @@ class Game:
                 print(letter, "\t", end="")
             print()
         print('-' * 3 * (len(self._cells[0])))
+
+    def handle_click(self, x: int, y: int):
+        set_to_remove = self.find_neighbours(x, y)
+        len_to_remove = len(set_to_remove)
+        if len_to_remove < 2:
+            return
+        self.score += len_to_remove * self._one_cube_price
+        add_new_blocks = False
+        if len_to_remove >= self.blocks_to_add:
+            add_new_blocks = True
+        deleted = self.delete_cells(set_to_remove)
+        self.move_cells(deleted, add_new_blocks)
+        self.update_count_of_blocks()
+
+    def update_count_of_blocks(self):
+        self.blocks_to_add = self.score // 1000 + 2
+
+    @property
+    def score(self):
+        return self._score
+
+    @property
+    def blocks_to_add(self):
+        return self._blocks_to_add
+
+    @score.setter
+    def score(self, value):
+        self._score = value
+
+    @blocks_to_add.setter
+    def blocks_to_add(self, value):
+        self._blocks_to_add = value
 
 
 # проверить как работает метод сдвига пустых столбцов

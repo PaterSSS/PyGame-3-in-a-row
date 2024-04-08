@@ -32,9 +32,4 @@ class Cell:
 
 
 if __name__ == "__main__":
-    cells_list = [Cell(0, 0, TypeOfCell.star), Cell(0, 1, TypeOfCell.circle), Cell(0, 2, TypeOfCell.star),
-                  Cell(0, 3, TypeOfCell.rectangle),None, Cell(0, 5, TypeOfCell.triangle)]
-    cells_list[4] = cells_list[5]
-    cells_list[5] = None
-    for i in cells_list:
-        print(i.row, i.col, i.typeOfCell)
+    pass
