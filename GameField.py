@@ -2,12 +2,14 @@ import random as rnd
 
 from TypeOfCells import TypeOfCell
 from Cell import Cell
+from GameState import GameState
 
 
 class Game:
     _score = 0
     _blocks_to_add = 3
     _one_cube_price = 100
+    _state = GameState.PLAYING
 
     def __init__(self, rows: int = 0, columns: int = 0, path_to_file: str = None):
         if path_to_file is not None:
@@ -146,6 +148,9 @@ class Game:
         print('-' * 3 * (len(self._cells[0])))
 
     def handle_click(self, x: int, y: int):
+        if self.state != GameState.PLAYING:
+            return
+
         set_to_remove = self.find_neighbours(x, y)
         len_to_remove = len(set_to_remove)
         if len_to_remove < 2:
@@ -157,9 +162,33 @@ class Game:
         deleted = self.delete_cells(set_to_remove)
         self.move_cells(deleted, add_new_blocks)
         self.update_count_of_blocks()
+        self.print()
+        if not self.is_possible_to_move():
+            self.state = GameState.FAILED
 
     def update_count_of_blocks(self):
+        if self.score < 1000:
+            return
         self.blocks_to_add = self.score // 1000 + 2
+    # такой же вопрос, здесь что-то нечисто!!
+    def is_possible_to_move(self) -> bool:
+        all_cells_set = self.get_all_cells()
+
+        while all_cells_set:
+            cell = all_cells_set.pop()
+            row, col = cell.row, cell.col
+            all_neighbours = self.find_neighbours(row, col)
+            if len(all_neighbours) > 1:
+                return True
+            all_cells_set.difference(all_neighbours)
+        return False
+    # скорее всего есть баги, мне что то не нравится
+    def get_all_cells(self) -> set[Cell]:
+        all_cells = set()
+        for row in range(self._rows):
+            for col in range(self._columns):
+                all_cells.add(self._cells[row][col])
+        return all_cells
 
     @property
     def score(self):
@@ -177,14 +206,18 @@ class Game:
     def blocks_to_add(self, value):
         self._blocks_to_add = value
 
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, value):
+        self._state = value
+
 
 # проверить как работает метод сдвига пустых столбцов
 if __name__ == '__main__':
     game = Game(path_to_file="testField.txt")
+    game.handle_click(1, 3)
+    game.print()
 
-    game.print()
-    to_delete = game.find_neighbours(1, 3)
-    deepest = game.delete_cells(to_delete)
-    game.print()
-    game.move_cells(deepest, False)
-    game.print()

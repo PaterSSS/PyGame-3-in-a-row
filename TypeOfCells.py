@@ -1,7 +1,7 @@
-import enum
+from enum import Enum
 
 
-class TypeOfCell(enum.Enum):
+class TypeOfCell(Enum):
     triangle = 0
     circle = 1
     rectangle = 2
