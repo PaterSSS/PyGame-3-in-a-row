@@ -59,8 +59,14 @@ class Game:
                             type_of_cell = TypeOfCell.star
                     cell_field[rowIndex].append(Cell(rowIndex, col, type_of_cell))
             return row_size, col_size, cell_field
+    #
+    #
 
+    # TODO нет защиты от проверки пустых клеток, которые остаются когда маленькую группу убрали
+    # TODO  поле не полностью обновляется когда мы сначала убрали маленькую группу, потом ту, что
+    #  удовлетворяет требованиям обновления поля
     def find_neighbours(self, row: int, col: int) -> set[Cell]:
+        # fixme причём очень странно проверяет клетки, как-будто лишние попадают
         cells_to_delete: set[Cell] = set()
         if self._rows <= row < 0 and self._columns <= col < 0:
             return cells_to_delete
@@ -87,7 +93,7 @@ class Game:
                     and self._cells[x][y - 1] not in cells_to_delete):
                 cells_to_delete.add(self._cells[x][y - 1])
                 stack.append(self._cells[x][y - 1])
-
+        # fixme adfsad
         del stack
         return cells_to_delete
 
@@ -162,7 +168,6 @@ class Game:
         deleted = self.delete_cells(set_to_remove)
         self.move_cells(deleted, add_new_blocks)
         self.update_count_of_blocks()
-        self.print()
         if not self.is_possible_to_move():
             self.state = GameState.FAILED
 
@@ -170,6 +175,7 @@ class Game:
         if self.score < 1000:
             return
         self.blocks_to_add = self.score // 1000 + 2
+
     # такой же вопрос, здесь что-то нечисто!!
     def is_possible_to_move(self) -> bool:
         all_cells_set = self.get_all_cells()
@@ -182,6 +188,7 @@ class Game:
                 return True
             all_cells_set.difference(all_neighbours)
         return False
+
     # скорее всего есть баги, мне что то не нравится
     def get_all_cells(self) -> set[Cell]:
         all_cells = set()
@@ -214,10 +221,14 @@ class Game:
     def state(self, value):
         self._state = value
 
+    @property
+    def rows(self):
+        return self._rows
 
-# проверить как работает метод сдвига пустых столбцов
-if __name__ == '__main__':
-    game = Game(path_to_file="testField.txt")
-    game.handle_click(1, 3)
-    game.print()
+    @property
+    def columns(self):
+        return self._columns
 
+    @property
+    def cells(self):
+        return self._cells
