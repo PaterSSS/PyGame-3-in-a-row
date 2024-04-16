@@ -25,7 +25,7 @@ class Game:
 
     def fill_field(self) -> None:
         self._cells = []
-        list_of_enums = list(TypeOfCell)
+        list_of_enums = [TypeOfCell.star, TypeOfCell.circle, TypeOfCell.triangle, TypeOfCell.rectangle]
         for i in range(self._rows):
             self._cells.append([])
             for j in range(self._columns):
@@ -59,48 +59,43 @@ class Game:
                             type_of_cell = TypeOfCell.star
                     cell_field[rowIndex].append(Cell(rowIndex, col, type_of_cell))
             return row_size, col_size, cell_field
-    #
-    #
 
-    # TODO нет защиты от проверки пустых клеток, которые остаются когда маленькую группу убрали
     # TODO  поле не полностью обновляется когда мы сначала убрали маленькую группу, потом ту, что
     #  удовлетворяет требованиям обновления поля
     def find_neighbours(self, row: int, col: int) -> set[Cell]:
-        # fixme причём очень странно проверяет клетки, как-будто лишние попадают
         cells_to_delete: set[Cell] = set()
-        if self._rows <= row < 0 and self._columns <= col < 0:
+        if self._rows <= row < 0 or self._columns <= col < 0 or self._cells[row][col].type_of_cell == TypeOfCell.empty:
             return cells_to_delete
         stack = [self._cells[row][col]]
         cells_to_delete.add(self._cells[row][col])
         while stack:
             cell = stack.pop()
-            type_cell = cell.typeOfCell
+            type_cell = cell.type_of_cell
             x = cell.row
             y = cell.col
-            if (x + 1 < self._rows and self._cells[x + 1][y].typeOfCell == type_cell
+            if (x + 1 < self._rows and self._cells[x + 1][y].type_of_cell == type_cell
                     and self._cells[x + 1][y] not in cells_to_delete):
                 cells_to_delete.add(self._cells[x + 1][y])
                 stack.append(self._cells[x + 1][y])
-            if (x - 1 >= 0 and self._cells[x - 1][y].typeOfCell == type_cell
+            if (x - 1 >= 0 and self._cells[x - 1][y].type_of_cell == type_cell
                     and self._cells[x - 1][y] not in cells_to_delete):
                 cells_to_delete.add(self._cells[x - 1][y])
                 stack.append(self._cells[x - 1][y])
-            if (y + 1 < self._columns and self._cells[x][y + 1].typeOfCell == type_cell
+            if (y + 1 < self._columns and self._cells[x][y + 1].type_of_cell == type_cell
                     and self._cells[x][y + 1] not in cells_to_delete):
                 cells_to_delete.add(self._cells[x][y + 1])
                 stack.append(self._cells[x][y + 1])
-            if (y - 1 >= 0 and self._cells[x][y - 1].typeOfCell == type_cell
+            if (y - 1 >= 0 and self._cells[x][y - 1].type_of_cell == type_cell
                     and self._cells[x][y - 1] not in cells_to_delete):
                 cells_to_delete.add(self._cells[x][y - 1])
                 stack.append(self._cells[x][y - 1])
-        # fixme adfsad
         del stack
         return cells_to_delete
 
     def delete_cells(self, cells_to_delete: set[Cell]) -> dict[int, int]:
         deepest_cells = dict()
         for cell in cells_to_delete:
-            self._cells[cell.row][cell.col] = None
+            self._cells[cell.row][cell.col].type_of_cell = TypeOfCell.empty
             if cell.col in deepest_cells:
                 deepest_cells[cell.col] = max(deepest_cells[cell.col], cell.row)
             else:
@@ -113,13 +108,13 @@ class Game:
         for col, row in firs_to_move.items():
             count_of_none = 0
             for curIndex in range(row, -1, -1):
-                if self._cells[curIndex][col] is None:
+                if self._cells[curIndex][col].type_of_cell == TypeOfCell.empty:
                     count_of_none += 1
                     continue
-                self._cells[curIndex + count_of_none][col] = self._cells[curIndex][col]
-                self._cells[curIndex][col] = None
+                self._cells[curIndex + count_of_none][col].type_of_cell = self._cells[curIndex][col].type_of_cell
+                self._cells[curIndex][col].type_of_cell = TypeOfCell.empty
             if is_need_to_add:
-                list_of_types = list(TypeOfCell)
+                list_of_types = [TypeOfCell.star, TypeOfCell.circle, TypeOfCell.triangle, TypeOfCell.rectangle]
                 for i in range(count_of_none):
                     self._cells[i][col] = Cell(i, col, rnd.choice(list_of_types))
             elif count_of_none == self._rows:
@@ -130,24 +125,25 @@ class Game:
     def move_empty_column(self, left_empty_col) -> None:
         count_to_shift = 1
         for i in range(left_empty_col + 1, self._columns):
-            if self._cells[self._rows - 1][i] is None:
+            if self._cells[self._rows - 1][i].type_of_cell == TypeOfCell.empty:
                 count_to_shift += 1
                 continue
             for rowIndexToCopy in range(self._rows):
-                self._cells[rowIndexToCopy][i - count_to_shift] = self._cells[rowIndexToCopy][i]
-                self._cells[rowIndexToCopy][i] = None
+                self._cells[rowIndexToCopy][i - count_to_shift].type_of_cell \
+                    = self._cells[rowIndexToCopy][i].type_of_cell
+                self._cells[rowIndexToCopy][i].type_of_cell = TypeOfCell.empty
 
     def print(self) -> None:
         for i in self._cells:
             for j in i:
                 letter = 'r'
-                if j is None:
-                    letter = 'N'
-                elif j.typeOfCell == TypeOfCell.circle:
+                if j.type_of_cell == TypeOfCell.empty:
+                    letter = 'e'
+                elif j.type_of_cell == TypeOfCell.circle:
                     letter = 'c'
-                elif j.typeOfCell == TypeOfCell.star:
+                elif j.type_of_cell == TypeOfCell.star:
                     letter = 's'
-                elif j.typeOfCell == TypeOfCell.triangle:
+                elif j.type_of_cell == TypeOfCell.triangle:
                     letter = 't'
                 print(letter, "\t", end="")
             print()
@@ -169,14 +165,13 @@ class Game:
         self.move_cells(deleted, add_new_blocks)
         self.update_count_of_blocks()
         if not self.is_possible_to_move():
-            self.state = GameState.FAILED
+            self._state = GameState.FAILED
 
     def update_count_of_blocks(self):
         if self.score < 1000:
             return
         self.blocks_to_add = self.score // 1000 + 2
 
-    # такой же вопрос, здесь что-то нечисто!!
     def is_possible_to_move(self) -> bool:
         all_cells_set = self.get_all_cells()
 
@@ -189,12 +184,12 @@ class Game:
             all_cells_set.difference(all_neighbours)
         return False
 
-    # скорее всего есть баги, мне что то не нравится
     def get_all_cells(self) -> set[Cell]:
         all_cells = set()
         for row in range(self._rows):
             for col in range(self._columns):
-                all_cells.add(self._cells[row][col])
+                if self._cells[row][col].type_of_cell != TypeOfCell.empty:
+                    all_cells.add(self._cells[row][col])
         return all_cells
 
     @property

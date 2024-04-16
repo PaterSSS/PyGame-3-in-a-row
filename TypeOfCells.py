@@ -6,3 +6,4 @@ class TypeOfCell(Enum):
     circle = 1
     rectangle = 2
     star = 3
+    empty = 4

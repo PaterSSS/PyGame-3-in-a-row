@@ -3,11 +3,11 @@ import sys
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QStandardItemModel, QPainter, QMouseEvent
-from PyQt5.QtWidgets import QApplication, QTableWidgetItem, QItemDelegate, QStyleOptionViewItem
-from PyQt5 import QtGui
+from PyQt5.QtWidgets import QApplication, QItemDelegate, QStyleOptionViewItem, QDialog
 
 import Cell
 import GameField
+from GameState import GameState
 from TypeOfCells import TypeOfCell
 
 
@@ -65,27 +65,37 @@ class MainWindow(QtWidgets.QMainWindow):
         self.game_field.viewport().update()
 
     def on_item_paint(self, idx: QModelIndex, painter: QPainter, option: QStyleOptionViewItem) -> None:
-        if self.game.rows <= idx.row() < 0 and self.game.columns <= idx.column() < 0:
+        if self.game.rows <= idx.row() < 0 or self.game.columns <= idx.column() < 0:
             return
         cell = self.game.cells[idx.row()][idx.column()]
         color = QtCore.Qt.gray
-        if cell is not None:
-            cell_type = cell.typeOfCell
-            match cell_type:
-                case TypeOfCell.star:
-                    color = QtCore.Qt.yellow
-                case TypeOfCell.circle:
-                    color = QtCore.Qt.blue
-                case TypeOfCell.triangle:
-                    color = QtCore.Qt.green
-                case TypeOfCell.rectangle:
-                    color = QtCore.Qt.red
+        cell_type = cell.type_of_cell
+        match cell_type:
+            case TypeOfCell.star:
+                color = QtCore.Qt.yellow
+            case TypeOfCell.circle:
+                color = QtCore.Qt.blue
+            case TypeOfCell.triangle:
+                color = QtCore.Qt.green
+            case TypeOfCell.rectangle:
+                color = QtCore.Qt.red
+            case TypeOfCell.empty:
+                color = QtCore.Qt.white
         painter.fillRect(option.rect, color)
 
     def on_click(self, e: QModelIndex, me: QMouseEvent = None):
         if me.button() == Qt.LeftButton:
+            print('row - ', e.row(), 'col - ', e.column())
             self.game.handle_click(e.row(), e.column())
+            self.check_game_state()
         self.update_view()
+
+    def check_game_state(self):
+        if self.game.state == GameState.FAILED:
+            dial = QDialog(self)
+            dial.setWindowTitle('End of the game')
+            dial.resize(100, 100)
+            dial.exec_()
 
 
 if __name__ == '__main__':
