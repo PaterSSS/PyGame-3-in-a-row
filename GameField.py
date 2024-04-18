@@ -5,11 +5,15 @@ from Cell import Cell
 from GameState import GameState
 
 
+# Сделать звуки при удалении группы блоков. Когда ты восстановил много блок громкий. Стандартный при
+# удалении любого количества блоков и особый при удалении количества, превосходящего необходимое для
+# восстановления. И противный звук, когда проигрываешь
 class Game:
     _score = 0
     _blocks_to_add = 3
     _one_cube_price = 100
     _state = GameState.PLAYING
+    _list_of_choices = [TypeOfCell.star, TypeOfCell.circle, TypeOfCell.triangle, TypeOfCell.rectangle]
 
     def __init__(self, rows: int = 0, columns: int = 0, path_to_file: str = None):
         if path_to_file is not None:
@@ -25,11 +29,10 @@ class Game:
 
     def fill_field(self) -> None:
         self._cells = []
-        list_of_enums = [TypeOfCell.star, TypeOfCell.circle, TypeOfCell.triangle, TypeOfCell.rectangle]
         for i in range(self._rows):
             self._cells.append([])
             for j in range(self._columns):
-                self._cells[i].append(Cell(i, j, rnd.choice(list_of_enums)))
+                self._cells[i].append(Cell(i, j, rnd.choice(self._list_of_choices)))
 
     @staticmethod
     def read_field_from_file(path_to_file: str) -> tuple[int, int, list[list[Cell]]]:
@@ -60,8 +63,6 @@ class Game:
                     cell_field[rowIndex].append(Cell(rowIndex, col, type_of_cell))
             return row_size, col_size, cell_field
 
-    # TODO  поле не полностью обновляется когда мы сначала убрали маленькую группу, потом ту, что
-    #  удовлетворяет требованиям обновления поля
     def find_neighbours(self, row: int, col: int) -> set[Cell]:
         cells_to_delete: set[Cell] = set()
         if self._rows <= row < 0 or self._columns <= col < 0 or self._cells[row][col].type_of_cell == TypeOfCell.empty:
@@ -104,7 +105,7 @@ class Game:
         return deepest_cells
 
     def move_cells(self, firs_to_move: dict[int, int], is_need_to_add: bool) -> None:
-        first_empty_col = -1
+        first_empty_col = len(self._cells[0])
         for col, row in firs_to_move.items():
             count_of_none = 0
             for curIndex in range(row, -1, -1):
@@ -113,14 +114,13 @@ class Game:
                     continue
                 self._cells[curIndex + count_of_none][col].type_of_cell = self._cells[curIndex][col].type_of_cell
                 self._cells[curIndex][col].type_of_cell = TypeOfCell.empty
-            if is_need_to_add:
-                list_of_types = [TypeOfCell.star, TypeOfCell.circle, TypeOfCell.triangle, TypeOfCell.rectangle]
-                for i in range(count_of_none):
-                    self._cells[i][col] = Cell(i, col, rnd.choice(list_of_types))
-            elif count_of_none == self._rows:
-                first_empty_col = max(col, first_empty_col)
-        if first_empty_col != -1:
+
+            if count_of_none == self._rows and not is_need_to_add:
+                first_empty_col = min(col, first_empty_col)
+        if first_empty_col != len(self._cells[0]):
             self.move_empty_column(first_empty_col)
+        elif is_need_to_add:
+            self.fill_empty_cells()
 
     def move_empty_column(self, left_empty_col) -> None:
         count_to_shift = 1
@@ -132,6 +132,13 @@ class Game:
                 self._cells[rowIndexToCopy][i - count_to_shift].type_of_cell \
                     = self._cells[rowIndexToCopy][i].type_of_cell
                 self._cells[rowIndexToCopy][i].type_of_cell = TypeOfCell.empty
+
+    def fill_empty_cells(self):
+        for col in range(len(self._cells[0])):
+            for row in range(len(self._cells)):
+                if self._cells[row][col].type_of_cell != TypeOfCell.empty:
+                    break
+                self._cells[row][col].type_of_cell = rnd.choice(self._list_of_choices)
 
     def print(self) -> None:
         for i in self._cells:
