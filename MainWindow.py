@@ -164,7 +164,7 @@ class MainWindow(QtWidgets.QMainWindow):
     #
     #     pick_col_dialog.exec_()
 
-    #fixme доделать по красоте, пока выглядит вырвиглазно, но хотя бы работает чисто в теории
+    # fixme доделать по красоте, пока выглядит вырвиглазно, но хотя бы работает чисто в теории
     def check(self):
         self._dict_for_colors.clear()
         pick_col_dialog = QDialog()
@@ -177,26 +177,26 @@ class MainWindow(QtWidgets.QMainWindow):
         buttons_layout.addWidget(star_but)
 
         circle_but = QPushButton('круг')
-        circle_but.clicked.connect(partial(self.pick_color,'circ_color'))
+        circle_but.clicked.connect(partial(self.pick_color, 'circ_color'))
         buttons_layout.addWidget(circle_but)
 
         triangle_but = QPushButton('треугольник')
-        triangle_but.clicked.connect(partial(self.pick_color,'tri_color'))
+        triangle_but.clicked.connect(partial(self.pick_color, 'tri_color'))
         buttons_layout.addWidget(triangle_but)
 
         empty_but = QPushButton('пустой')
-        empty_but.clicked.connect(partial(self.pick_color,'empty_color'))
+        empty_but.clicked.connect(partial(self.pick_color, 'empty_color'))
         buttons_layout.addWidget(empty_but)
 
         rectangle_but = QPushButton('квадрат')
-        rectangle_but.clicked.connect(partial(self.pick_color,'rectangle_color'))
+        rectangle_but.clicked.connect(partial(self.pick_color, 'rec_color'))
         buttons_layout.addWidget(rectangle_but)
         layout.addLayout(buttons_layout)
 
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Reset | QDialogButtonBox.Cancel)
-        button_box.accepted.connect(self.update_colors)
+        button_box.button(QDialogButtonBox.Ok).clicked.connect(partial(self.update_colors, pick_col_dialog))
         button_box.rejected.connect(pick_col_dialog.reject)
-        button_box.button(QDialogButtonBox.Reset).clicked.connect(self.reset_colors)
+        button_box.button(QDialogButtonBox.Reset).clicked.connect(partial(self.reset_colors, pick_col_dialog))
         layout.addWidget(button_box)
 
         pick_col_dialog.exec_()
@@ -213,7 +213,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 start_color = self.color_for_blocks.tri
             case 'empty_color':
                 start_color = self.color_for_blocks.empty
-            case 'rectangle_color':
+            case 'rec_color':
                 start_color = self.color_for_blocks.rec
         color_dia.setCurrentColor(start_color)
 
@@ -222,11 +222,13 @@ class MainWindow(QtWidgets.QMainWindow):
         if color.isValid():
             self._dict_for_colors[block_name] = color
 
-    def update_colors(self):
+    def update_colors(self, qdialog):
+        qdialog.accept()
         self.color_for_blocks = ColorSettings(**self._dict_for_colors)
         self.update_view()
 
-    def reset_colors(self):
+    def reset_colors(self, qdialog):
+        qdialog.accept()
         self.color_for_blocks = ColorSettings()
         self.update_view()
 
