@@ -2,7 +2,8 @@ import sys
 from functools import partial
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QModelIndex, Qt
-from PyQt5.QtGui import QStandardItemModel, QPainter, QMouseEvent, QColor
+from PyQt5.QtGui import QStandardItemModel, QPainter, QMouseEvent
+from PyQt5.QtMultimedia import QSound
 from PyQt5.QtWidgets import QApplication, QItemDelegate, QStyleOptionViewItem, QDialog, QAction, QMessageBox, \
     QVBoxLayout, QHBoxLayout, QDialogButtonBox, QPushButton
 
@@ -13,6 +14,12 @@ from GameState import GameState
 from TypeOfCells import TypeOfCell
 
 
+# todo 1) добавить звуки при нажатии 2) сделать нормальный размер поля, и чтобы окно подгонялось под него
+# todo 3)уведомление о проигрыше 4) лейблы для счёта и кол-ва блоков
+# todo 5) во всплывающем окне где написано о проигрыше добавить кнопку рестарта. Можно докрутить ввод имени
+# чтобы сохранять прогресс и выводить топ игроков.
+
+
 class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
@@ -21,6 +28,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.game.fill_field()
         self.color_for_blocks = ColorSettings()
         self._dict_for_colors = dict()
+        self.sound = {'default': QSound('sounds/default_sound.wav'),
+                      'blocks': QSound('sounds/change_count_of_blocks.wav'),
+                      'big_blocks': QSound('sounds/bitGroupOfBlocks.wav')}
         self.setWindowTitle('PyGame')
         self.setGeometry(500, 300, 507, 700)
 
@@ -90,10 +100,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def on_click(self, e: QModelIndex, me: QMouseEvent = None):
         if me.button() == Qt.LeftButton:
-            print('row - ', e.row(), 'col - ', e.column())
-            self.game.handle_click(e.row(), e.column())
+            # print('row - ', e.row(), 'col - ', e.column())
+            if e.row() == -1 or e.column() == -1:
+                return
+            sound = self.game.handle_click(e.row(), e.column())
+            match sound:
+                case 'default':
+                    self.sound['default'].play()
+                case 'blocks':
+                    self.sound['blocks'].play()
+                case 'big_blocks':
+                    self.sound['big_blocks'].play()
             self.check_game_state()
-        self.update_view()
+            self.update_view()
 
     def check_game_state(self):
         if self.game.state == GameState.FAILED:
@@ -107,65 +126,29 @@ class MainWindow(QtWidgets.QMainWindow):
         file_menu = main_menu.addMenu('Settings')
 
         change_colors = QAction('Change colors', self)
-        change_colors.triggered.connect(self.check)
+        change_colors.triggered.connect(self.pick_color_menu)
+        change_colors.setShortcut('Ctrl+P')
         file_menu.addAction(change_colors)
 
         display_info = QAction('About game', self)
         display_info.triggered.connect(self.show_info_menu)
+        display_info.setShortcut('Ctrl+I')
         file_menu.addAction(display_info)
 
-    # def pick_colors_menu(self):
-    #     self._dict_for_colors.clear()
-    #     pick_col_dialog = QDialog(self)
-    #     pick_col_dialog.setWindowTitle('Выбрать цвета для кубиков')
-    #     layout = QVBoxLayout()
-    #
-    #     buttons_layout = QHBoxLayout()
-    #     star_but = QtWidgets.QPushButton('звёздочка')
-    #     star_but.clicked.connect(lambda who='star_color': self.pick_color(who))
-    #     buttons_layout.addWidget(star_but)
-    #
-    #     circle_but = QtWidgets.QPushButton('круг')
-    #     circle_but.clicked.connect(lambda who='circ_color': self.pick_color(who))
-    #     buttons_layout.addWidget(circle_but)
-    #
-    #     triangle_but = QtWidgets.QPushButton('треугольник')
-    #     triangle_but.clicked.connect(lambda who='tri_color': self.pick_color(who))
-    #     buttons_layout.addWidget(triangle_but)
-    #
-    #     empty_but = QtWidgets.QPushButton('пустой')
-    #     empty_but.clicked.connect(lambda who='empty_color': self.pick_color(who))
-    #     buttons_layout.addWidget(empty_but)
-    #
-    #     rectangle_but = QtWidgets.QPushButton('квадрат')
-    #     rectangle_but.clicked.connect(lambda who='rectangle_color': self.pick_color(who))
-    #     buttons_layout.addWidget(rectangle_but)
-    #     layout.addLayout(buttons_layout)
-    #
-    #     # control_layout = QHBoxLayout()
-    #     # ok_butt = pick_col_dialog.addButton("OK", QMessageBox.ApplyRole)
-    #     # ok_butt.clicked.connect(self.update_colors)
-    #     # control_layout.addWidget(ok_butt)
-    #     #
-    #     # reset_butt = pick_col_dialog.addButton("Reset", QMessageBox.DestructiveRole)
-    #     # reset_butt.clicked.connect(self.reset_colors)
-    #     # control_layout.addWidget(reset_butt)
-    #
-    #     button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Reset | QDialogButtonBox.Cancel)
-    #     button_box.accepted.connect(self.update_colors())
-    #     button_box.rejected.connect(pick_col_dialog.reject)
-    #     button_box.button(QDialogButtonBox.Reset).clicked.connect(self.reset_colors)
-    #     layout.addWidget(button_box)
-    #     # cancel_butt = pick_col_dialog.addButton("Cancel", QMessageBox.RejectRole)
-    #     # pick_col_dialog.setDefaultButton(ok_butt)
-    #     # control_layout.addWidget(cancel_butt)
-    #     # layout.addLayout(control_layout)
-    #     # pick_col_dialog.setLayout(layout)
-    #
-    #     pick_col_dialog.exec_()
+        restart = QAction('Restart', self)
+        restart.triggered.connect(self.restart_game)
+        restart.setShortcut('Ctrl+R')
+        file_menu.addAction(restart)
+
+    def restart_game(self):
+        self.game.state = GameState.PLAYING
+        self.game = GameField.Game(15, 12)
+        self.game.fill_field()
+        self.color_for_blocks = ColorSettings()
+        self.update_view()
 
     # fixme доделать по красоте, пока выглядит вырвиглазно, но хотя бы работает чисто в теории
-    def check(self):
+    def pick_color_menu(self):
         self._dict_for_colors.clear()
         pick_col_dialog = QDialog()
         pick_col_dialog.setWindowTitle('Выбрать цвета для кубиков')

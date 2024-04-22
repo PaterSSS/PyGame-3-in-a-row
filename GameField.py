@@ -156,28 +156,38 @@ class Game:
             print()
         print('-' * 3 * (len(self._cells[0])))
 
-    def handle_click(self, x: int, y: int):
+    def handle_click(self, x: int, y: int) -> str:
         if self.state != GameState.PLAYING:
-            return
+            return 'No'
 
         set_to_remove = self.find_neighbours(x, y)
         len_to_remove = len(set_to_remove)
         if len_to_remove < 2:
-            return
+            return 'No'
+        sound_peeker = 'default'
         self.score += len_to_remove * self._one_cube_price
         add_new_blocks = False
         if len_to_remove >= self.blocks_to_add:
             add_new_blocks = True
+        if len_to_remove >= 2 * self.blocks_to_add:
+            sound_peeker = 'big_blocks'
         deleted = self.delete_cells(set_to_remove)
         self.move_cells(deleted, add_new_blocks)
-        self.update_count_of_blocks()
+        if self.update_count_of_blocks():
+            sound_peeker = 'blocks'
         if not self.is_possible_to_move():
             self._state = GameState.FAILED
+            return 'No'
+        return sound_peeker
 
-    def update_count_of_blocks(self):
+    def update_count_of_blocks(self) -> bool:
         if self.score < 1000:
-            return
-        self.blocks_to_add = self.score // 1000 + 2
+            return False
+        cur_count = self.score // 1000 + 2
+        if cur_count > self.blocks_to_add:
+            self.blocks_to_add = cur_count
+            return True
+        return False
 
     def is_possible_to_move(self) -> bool:
         all_cells_set = self.get_all_cells()
