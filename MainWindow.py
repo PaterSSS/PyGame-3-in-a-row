@@ -29,9 +29,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.game.fill_field()
         self.color_for_blocks = ColorSettings()
         self._dict_for_colors = dict()
-        self.sound = {'default': QSound('sounds/default_sound.wav'),
+        self.sound = {'default': QSound('sounds/default.wav'),
                       'blocks': QSound('sounds/change_count_of_blocks.wav'),
-                      'big_blocks': QSound('sounds/bitGroupOfBlocks.wav')}
+                      'big_blocks': QSound('sounds/big_count.wav')}
         self.setWindowTitle('PyGame')
         self.setGeometry(0, 0, 625, 700)
         self.center_on_screen()
@@ -187,6 +187,15 @@ class MainWindow(QtWidgets.QMainWindow):
         restart.triggered.connect(self.restart_game)
         restart.setShortcut('Ctrl+R')
         file_menu.addAction(restart)
+
+        resize_window = QAction('Resize', self)
+        resize_window.triggered.connect(self.resize_win)
+        resize_window.setShortcut('Ctrl+W')
+        file_menu.addAction(resize_window)
+
+    def resize_win(self):
+        self.setGeometry(0, 0, 625, 700)
+        self.center_on_screen()
 
     def restart_game(self):
         self.game.state = GameState.PLAYING
