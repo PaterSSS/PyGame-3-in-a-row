@@ -24,6 +24,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(MainWindow, self).__init__()
+        self.is_frozen = False
         self.game = GameField.Game(15, 12)
         self.game.fill_field()
         self.color_for_blocks = ColorSettings()
@@ -99,7 +100,7 @@ class MainWindow(QtWidgets.QMainWindow):
         painter.fillRect(option.rect, color)
 
     def on_click(self, e: QModelIndex, me: QMouseEvent = None):
-        if me.button() == Qt.LeftButton:
+        if me.button() == Qt.LeftButton and not self.is_frozen:
             # print('row - ', e.row(), 'col - ', e.column())
             if e.row() == -1 or e.column() == -1:
                 return
@@ -116,10 +117,22 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def check_game_state(self):
         if self.game.state == GameState.FAILED:
-            dial = QDialog(self)
-            dial.setWindowTitle('End of the game')
-            dial.resize(100, 100)
-            dial.exec()
+            dial = QMessageBox(self)
+            dial.setWindowTitle("Вы проиграли!")
+            dial.setIcon(QMessageBox.Information)
+            dial.setText(f'Вы молодец. Ваш итоговый счёт составил - {self.game.score}')
+            dial.setInformativeText("Если вы хотите сыграть снова и побить свой рекорд, то нажмите OK")
+            btn_ok = QPushButton("OK", dial)
+            btn_ok.clicked.connect(self.restart_game)
+
+            btn_cancel = QPushButton("Cancel", dial)
+            btn_cancel.clicked.connect(self.freeze_game)
+            dial.addButton(btn_cancel, QMessageBox.ResetRole)
+            dial.addButton(btn_ok, QMessageBox.AcceptRole)
+            dial.exec_()
+
+    def freeze_game(self):
+        self.is_frozen = True
 
     def set_menu_bar(self):
         main_menu = self.menuBar()
@@ -142,6 +155,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def restart_game(self):
         self.game.state = GameState.PLAYING
+        self.is_frozen = False
         self.game = GameField.Game(15, 12)
         self.game.fill_field()
         self.color_for_blocks = ColorSettings()
@@ -221,7 +235,7 @@ class MainWindow(QtWidgets.QMainWindow):
         infoMsgBox.setIcon(QMessageBox.Information)
         infoMsgBox.setText('Правила игры:')
         infoMsgBox.setInformativeText(
-            "Вы должны исключать одинаковые блоки. За это даются очки. Ваша задача - набрать максимальное" +
+            "Вы должны исключать одинаковые блоки. За это даются очки. Ваша задача - набрать максимальное " +
             "количество очков. Чем больше очков, тем большую группу блоков нужно исключить, чтобы поле обновилось. " +
             "Вы проигрываете, когда нет ни одной группы блоков.")
         infoMsgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
