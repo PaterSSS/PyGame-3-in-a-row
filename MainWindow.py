@@ -2,10 +2,10 @@ import sys
 from functools import partial
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QModelIndex, Qt
-from PyQt5.QtGui import QStandardItemModel, QPainter, QMouseEvent
+from PyQt5.QtGui import QStandardItemModel, QPainter, QMouseEvent, QFont
 from PyQt5.QtMultimedia import QSound
 from PyQt5.QtWidgets import QApplication, QItemDelegate, QStyleOptionViewItem, QDialog, QAction, QMessageBox, \
-    QVBoxLayout, QHBoxLayout, QDialogButtonBox, QPushButton
+    QVBoxLayout, QHBoxLayout, QDialogButtonBox, QPushButton, QHeaderView
 
 import Cell
 import GameField
@@ -33,7 +33,8 @@ class MainWindow(QtWidgets.QMainWindow):
                       'blocks': QSound('sounds/change_count_of_blocks.wav'),
                       'big_blocks': QSound('sounds/bitGroupOfBlocks.wav')}
         self.setWindowTitle('PyGame')
-        self.setGeometry(500, 300, 507, 700)
+        self.setGeometry(0, 0, 625, 700)
+        self.center_on_screen()
 
         self.game_field = QtWidgets.QTableView(self)
         self.game_field.setGeometry(10, 10, 500, 700)
@@ -58,11 +59,47 @@ class MainWindow(QtWidgets.QMainWindow):
             idx = self.game_field.indexAt(event.pos())
             self.on_click(idx, event)
 
+        self.blocks_in_group = QtWidgets.QLabel("Количество блоков: 3", self)
+        self.score = QtWidgets.QLabel("Счёт: 0", self)
+        font = QFont("Times New Roman", 14)
+        self.blocks_in_group.setFont(font)
+        self.score.setFont(font)
+
+        layoutHead = QtWidgets.QHBoxLayout()
+        layoutHead.addWidget(self.blocks_in_group, alignment=Qt.AlignLeft)
+        layoutHead.addWidget(self.score, alignment=Qt.AlignRight)
+        main_layout = QtWidgets.QVBoxLayout()
+        main_layout.addLayout(layoutHead)
+        main_layout.addWidget(self.game_field)
+        central_widget = QtWidgets.QWidget()
+        central_widget.setLayout(main_layout)
+
+        self.game_field.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.game_field.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.game_field.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.game_field.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.game_field.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
         self.game_field.setItemDelegate(MyDelegate(self))
         self.game_field.mousePressEvent = mousePressEvent
-        self.setCentralWidget(self.game_field)
         self.set_menu_bar()
+        self.setCentralWidget(central_widget)
         self.show()
+
+    def update_labels(self):
+        self.blocks_in_group.setText(f"Количество блоков: {self.game.blocks_to_add}")
+        self.score.setText(f"Счёт: {self.game.score}")
+
+    def center_on_screen(self):
+        # Получаем геометрию доступного рабочего стола
+        screen_geometry = QApplication.desktop().availableGeometry()
+
+        # Получаем размеры и центр экрана
+        window_geometry = self.frameGeometry()
+        window_geometry.moveCenter(screen_geometry.center())
+
+        # Устанавливаем окно в центре экрана
+        self.move(window_geometry.topLeft())
 
     @staticmethod
     def convert_cells(cell: Cell) -> str:
@@ -100,10 +137,7 @@ class MainWindow(QtWidgets.QMainWindow):
         painter.fillRect(option.rect, color)
 
     def on_click(self, e: QModelIndex, me: QMouseEvent = None):
-        if me.button() == Qt.LeftButton and not self.is_frozen:
-            # print('row - ', e.row(), 'col - ', e.column())
-            if e.row() == -1 or e.column() == -1:
-                return
+        if me.button() == Qt.LeftButton and not self.is_frozen and e.row() != -1 and e.column() != -1:
             sound = self.game.handle_click(e.row(), e.column())
             match sound:
                 case 'default':
@@ -113,6 +147,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 case 'big_blocks':
                     self.sound['big_blocks'].play()
             self.check_game_state()
+            self.update_labels()
             self.update_view()
 
     def check_game_state(self):
@@ -159,6 +194,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.game = GameField.Game(15, 12)
         self.game.fill_field()
         self.color_for_blocks = ColorSettings()
+        self.blocks_in_group.setText("Количество блоков: 3")
+        self.score.setText("Счёт: 0")
         self.update_view()
 
     # fixme доделать по красоте, пока выглядит вырвиглазно, но хотя бы работает чисто в теории
