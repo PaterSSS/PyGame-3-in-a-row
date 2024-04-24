@@ -3,7 +3,7 @@ from functools import partial
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QStandardItemModel, QPainter, QMouseEvent, QFont
-from PyQt5.QtMultimedia import QSound
+from PyQt5.QtMultimedia import QSoundEffect
 from PyQt5.QtWidgets import QApplication, QItemDelegate, QStyleOptionViewItem, QDialog, QAction, QMessageBox, \
     QVBoxLayout, QHBoxLayout, QDialogButtonBox, QPushButton, QHeaderView
 
@@ -14,12 +14,9 @@ from GameState import GameState
 from TypeOfCells import TypeOfCell
 
 
-# todo 1) добавить звуки при нажатии 2) сделать нормальный размер поля, и чтобы окно подгонялось под него
-# todo 3)уведомление о проигрыше 4) лейблы для счёта и кол-ва блоков
-# todo 5) во всплывающем окне где написано о проигрыше добавить кнопку рестарта. Можно докрутить ввод имени
-# чтобы сохранять прогресс и выводить топ игроков.
-
-
+#Todo улучшить скорость отрисовки можно добавить кэширование, чтобы только необходимое перерисовывлось
+#ещё можно заменить на drawItem() гпт предложил это. В корне будет лежать текстовик с тем что предложил гпт
+# сделать нормальную структуру, а не мешанину как сейчас
 class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
@@ -29,9 +26,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.game.fill_field()
         self.color_for_blocks = ColorSettings()
         self._dict_for_colors = dict()
-        self.sound = {'default': QSound('sounds/default.wav'),
-                      'blocks': QSound('sounds/change_count_of_blocks.wav'),
-                      'big_blocks': QSound('sounds/big_count.wav')}
+        self.sound = {'default': QSoundEffect(self),
+                      'blocks': QSoundEffect(self),
+                      'big_blocks': QSoundEffect(self)}
+        self.sound['default'].setSource(QtCore.QUrl.fromLocalFile('sounds/default.wav'))
+        self.sound['blocks'].setSource(QtCore.QUrl.fromLocalFile('sounds/change_count_of_blocks.wav'))
+        self.sound['big_blocks'].setSource(QtCore.QUrl.fromLocalFile('sounds/big_count.wav'))
         self.setWindowTitle('PyGame')
         self.setGeometry(0, 0, 625, 700)
         self.center_on_screen()
@@ -286,12 +286,6 @@ class MainWindow(QtWidgets.QMainWindow):
             "Вы проигрываете, когда нет ни одной группы блоков.")
         infoMsgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
         infoMsgBox.exec_()
-
-
-class ColorDialog(QDialog):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Выберите цвет")
 
 
 if __name__ == '__main__':
