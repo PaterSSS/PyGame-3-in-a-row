@@ -1,11 +1,12 @@
 import sys
+import sqlite3
 from functools import partial
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QStandardItemModel, QPainter, QMouseEvent, QFont
 from PyQt5.QtMultimedia import QSoundEffect
 from PyQt5.QtWidgets import QApplication, QItemDelegate, QStyleOptionViewItem, QDialog, QAction, QMessageBox, \
-    QVBoxLayout, QHBoxLayout, QDialogButtonBox, QPushButton, QHeaderView
+    QVBoxLayout, QHBoxLayout, QDialogButtonBox, QPushButton, QHeaderView, QLineEdit
 
 import Cell
 import GameField
@@ -14,13 +15,16 @@ from GameState import GameState
 from TypeOfCells import TypeOfCell
 
 
-#Todo улучшить скорость отрисовки можно добавить кэширование, чтобы только необходимое перерисовывлось
-#ещё можно заменить на drawItem() гпт предложил это. В корне будет лежать текстовик с тем что предложил гпт
-# сделать нормальную структуру, а не мешанину как сейчас
+# написать о себе и добавить сохранение результатов
 class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(MainWindow, self).__init__()
+        self.username = None
+        self.cursor = None
+        self.connection = None
+        self.db_con()
+        self.enter_username()
         self.is_frozen = False
         self.game = GameField.Game(15, 12)
         self.game.fill_field()
@@ -32,6 +36,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sound['default'].setSource(QtCore.QUrl.fromLocalFile('sounds/default.wav'))
         self.sound['blocks'].setSource(QtCore.QUrl.fromLocalFile('sounds/change_count_of_blocks.wav'))
         self.sound['big_blocks'].setSource(QtCore.QUrl.fromLocalFile('sounds/big_count.wav'))
+
         self.setWindowTitle('PyGame')
         self.setGeometry(0, 0, 625, 700)
         self.center_on_screen()
@@ -85,6 +90,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self.set_menu_bar()
         self.setCentralWidget(central_widget)
         self.show()
+
+    def db_con(self):
+        self.connection = sqlite3.connect('game.db')
+        self.cursor = self.connection.cursor()
+        self.cursor.execute("create table if not exists Score("
+                            "id integer primary key autoincrement,"
+                            "username text not null,"
+                            "score integer not null) ")
+        self.connection.commit()
+
+    def enter_username(self):
+        dialog = QtWidgets.QInputDialog(self)
+        string, ok = dialog.getText(None, "Введите ваш никнейм", "Строка?", QLineEdit.Normal, '')
+        if ok:
+            self.cursor.execute("select username from Score where username = ?", (string,))
+            data = self.cursor.fetchone()
+            if not data:
+                self.cursor.execute("insert into Score(username, score) values(\'" + string + "\', 0);")
+            self.username = string
 
     def update_labels(self):
         self.blocks_in_group.setText(f"Количество блоков: {self.game.blocks_to_add}")
@@ -152,10 +176,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def check_game_state(self):
         if self.game.state == GameState.FAILED:
+            record_score = self.game.score
+            self.cursor.execute('select score from Score where username = ?', (self.username,))
+            data = self.cursor.fetchone()
+            if data[0] > self.game.score:
+                record_score = data
+                self.cursor.execute('update Score set score = ? where username = ?', (record_score, self.username))
+                self.connection.commit()
             dial = QMessageBox(self)
             dial.setWindowTitle("Вы проиграли!")
             dial.setIcon(QMessageBox.Information)
-            dial.setText(f'Вы молодец. Ваш итоговый счёт составил - {self.game.score}')
+            dial.setText(f'{self.username}. Ваш итоговый счёт составил - {self.game.score}, ваш прошлый рекорд {data[0]}')
             dial.setInformativeText("Если вы хотите сыграть снова и побить свой рекорд, то нажмите OK")
             btn_ok = QPushButton("OK", dial)
             btn_ok.clicked.connect(self.restart_game)
@@ -193,6 +224,25 @@ class MainWindow(QtWidgets.QMainWindow):
         resize_window.setShortcut('Ctrl+W')
         file_menu.addAction(resize_window)
 
+        info_about_mu = QAction("About author", self)
+        info_about_mu.triggered.connect(self.info_about)
+        file_menu.addAction(info_about_mu)
+
+    def info_about(self):
+        infoMsgBox = QtWidgets.QMessageBox(self)
+        infoMsgBox.setWindowTitle('Игра \"Одинаковые блоки\"')
+        infoMsgBox.setIcon(QMessageBox.Information)
+        infoMsgBox.setText('Об авторе')
+        infoMsgBox.setTextFormat(Qt.RichText)
+        infoMsgBox.setInformativeText("Я обучаюсь на 2м курсе ФКН ВГУ по программе \"Программная инженерия\"." +
+                                      "Увлекаюсь программированием, с интересом выполняю все задания по учёбе и " +
+                                      "стараюсь" +
+                                      "постоянно узнавать что-то новое, вк - <a href='https://vk.com/lchelyapin'>VK</a>")
+
+
+        infoMsgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        infoMsgBox.exec_()
+
     def resize_win(self):
         self.setGeometry(0, 0, 625, 700)
         self.center_on_screen()
@@ -207,7 +257,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.score.setText("Счёт: 0")
         self.update_view()
 
-    # fixme доделать по красоте, пока выглядит вырвиглазно, но хотя бы работает чисто в теории
     def pick_color_menu(self):
         self._dict_for_colors.clear()
         pick_col_dialog = QDialog()
